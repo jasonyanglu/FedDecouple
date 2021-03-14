@@ -1,0 +1,18 @@
+{
+    "epochs": 100,
+    "num_users": 10,
+    "local_ep": 1,
+    "local_bs": 128,
+    "bs": 128,
+    "lr": 0.01,
+    "momentum": 0.9,
+    "split_ratio": 0.9,
+    "overlapping_classes": 4,
+    "base_layers": 204,
+    "model": "ResNet",
+    "dataset": "cifar",
+    "iid": false,
+    "num_classes": 10,
+    "gpu": 0,
+    "seed": 1
+}
