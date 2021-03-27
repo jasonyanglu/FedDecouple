@@ -75,7 +75,7 @@ def finetune_client(args, dataset, train_idx, model):
 
     loss_func = nn.CrossEntropyLoss()
     train_idx = list(train_idx)
-    ldr_train = DataLoader(DatasetSplit(dataset, train_idx), batch_size=args.train_batch_size, shuffle=True)
+    train_loader = DataLoader(DatasetSplit(dataset, train_idx), batch_size=args.train_batch_size, shuffle=True)
     model.train()
 
     # train and update
@@ -85,7 +85,7 @@ def finetune_client(args, dataset, train_idx, model):
     for epoch_i in range(args.num_local_finetune_epochs):
         batch_loss = []
 
-        for batch_idx, (images, labels) in enumerate(ldr_train):
+        for batch_idx, (images, labels) in enumerate(train_loader):
             images, labels = images.to(args.device), labels.to(args.device)
             optimizer.zero_grad()
             log_probs = model(images)
