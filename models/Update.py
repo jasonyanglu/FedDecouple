@@ -12,85 +12,45 @@ import torch.nn.functional as F
 class DatasetSplit(Dataset):
     """
     Class DatasetSplit - To get datasamples corresponding to the indices of samples a particular client has from the actual complete dataset
-
     """
 
     def __init__(self, dataset, idxs):
-        """
-
-        Constructor Function
-
-        Parameters:
-
-            dataset: The complete dataset
-
-            idxs : List of indices of complete dataset that is there in a particular client
-
-        """
         self.dataset = dataset
         self.idxs = list(idxs)
 
     def __len__(self):
-        """
-
-        returns length of local dataset
-
-        """
-
         return len(self.idxs)
 
     def __getitem__(self, item):
-        """
-        Gets individual samples from complete dataset
-
-        returns image and its label
-
-        """
         image, label = self.dataset[self.idxs[item]]
         return image, label
 
 
-# function to train a client
-
-def train_client(args, dataset, train_idx, net):
+def train_client(args, dataset, train_idx, model):
     '''
-
-    Train individual client models
-
-    Parameters:
-
-        net (state_dict) : Client Model
-
-        datatest (dataset) : Complete dataset loaded by the Dataloader
-
-        args (dictionary) : The list of arguments defined by the user
-
-        train_idx (list) : List of indices of those samples from the actual complete dataset that are there in the local training dataset of this client
-
-    Returns:
-
-        net.state_dict() (state_dict) : The updated weights of the client model
-
-        train_loss (float) : Cumulative loss while training
-
+    :param args: The list of arguments defined by the user
+    :param dataset: Complete dataset loaded by the Dataloader
+    :param train_idx: List of indices of those samples from the actual complete dataset that are there in the local training dataset of this client
+    :param model: Client Model
+    :return:
     '''
 
     loss_func = nn.CrossEntropyLoss()
     train_idx = list(train_idx)
-    ldr_train = DataLoader(DatasetSplit(dataset, train_idx), batch_size=args.local_bs, shuffle=True)
-    net.train()
+    train_loader = DataLoader(DatasetSplit(dataset, train_idx), batch_size=args.train_batch_size, shuffle=True)
+    model.train()
 
     # train and update
-    optimizer = torch.optim.SGD(net.parameters(), lr=args.lr, momentum=args.momentum)
+    optimizer = torch.optim.SGD(model.parameters(), lr=args.lr)
     epoch_loss = []
 
-    for iter in range(args.local_ep):
+    for epoch_i in range(args.num_local_epochs):
         batch_loss = []
 
-        for batch_idx, (images, labels) in enumerate(ldr_train):
+        for batch_idx, (images, labels) in enumerate(train_loader):
             images, labels = images.to(args.device), labels.to(args.device)
             optimizer.zero_grad()
-            log_probs = net(images)
+            log_probs = model(images)
             loss = loss_func(log_probs, labels)
             loss.backward()
             optimizer.step()
@@ -98,17 +58,17 @@ def train_client(args, dataset, train_idx, net):
             batch_loss.append(loss.item())
         epoch_loss.append(sum(batch_loss) / len(batch_loss))
 
-    return net.state_dict(), sum(epoch_loss) / len(epoch_loss)
+    return model.state_dict(), sum(epoch_loss) / len(epoch_loss)
 
 
-def finetune_client(args, dataset, train_idx, net):
+def finetune_client(args, dataset, train_idx, model):
     '''
 
     Train individual client models
 
     Parameters:
 
-        net (state_dict) : Client Model
+        model (state_dict) : Client Model
 
         datatest (dataset) : Complete dataset loaded by the Dataloader
 
@@ -127,10 +87,10 @@ def finetune_client(args, dataset, train_idx, net):
     loss_func = nn.CrossEntropyLoss()
     train_idx = list(train_idx)
     ldr_train = DataLoader(DatasetSplit(dataset, train_idx), batch_size=args.local_bs, shuffle=True)
-    net.train()
+    model.train()
 
     # train and update
-    optimizer = torch.optim.SGD(net.parameters(), lr=args.lr, momentum=args.momentum)
+    optimizer = torch.optim.SGD(model.parameters(), lr=args.lr)
     epoch_loss = []
 
     for iter in range(1):
@@ -139,7 +99,7 @@ def finetune_client(args, dataset, train_idx, net):
         for batch_idx, (images, labels) in enumerate(ldr_train):
             images, labels = images.to(args.device), labels.to(args.device)
             optimizer.zero_grad()
-            log_probs = net(images)
+            log_probs = model(images)
             loss = loss_func(log_probs, labels)
             loss.backward()
             optimizer.step()
@@ -147,23 +107,23 @@ def finetune_client(args, dataset, train_idx, net):
             batch_loss.append(loss.item())
         epoch_loss.append(sum(batch_loss) / len(batch_loss))
 
-    return net.state_dict(), sum(epoch_loss) / len(epoch_loss)
+    return model.state_dict(), sum(epoch_loss) / len(epoch_loss)
 
 
 # function to test a client
-def test_client(args, dataset, test_idx, net):
+def test_client(args, dataset, test_idx, model):
     '''
     :param args: (dictionary) The list of arguments defined by the user
     :param dataset: (dataset) The data on which we want the performance of the model to be evaluated
     :param test_idx: (list) List of indices of those samples from the actual complete dataset that are there in the local dataset of this client
-    :param net: (state_dict) Client Model
+    :param model: (state_dict) Client Model
     :return:
         accuracy: (float) Percentage accuracy on test set of the model
         test_loss: (float) Cumulative loss on the data
     '''
 
-    data_loader = DataLoader(DatasetSplit(dataset, test_idx), batch_size=args.local_bs)
-    net.eval()
+    data_loader = DataLoader(DatasetSplit(dataset, test_idx), batch_size=args.test_batch_size)
+    model.eval()
     # print (test_data)
     test_loss = 0
     correct = 0
@@ -175,7 +135,7 @@ def test_client(args, dataset, test_idx, net):
         for idx, (data, target) in enumerate(data_loader):
             if args.gpu != -1:
                 data, target = data.cuda(), target.cuda()
-            log_probs = net(data)
+            log_probs = model(data)
             # sum up batch loss
             test_loss += F.cross_entropy(log_probs, target, reduction='sum').item()
             # get the index of the max log-probability

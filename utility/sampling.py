@@ -1,35 +1,52 @@
 import numpy as np
 from torchvision import datasets, transforms
-import random
+
+np.random.seed(0)
+
+
+def choose_two_digit_imbalance(num_class, num_split):
+    split_list = []
+    for i in range(num_split):
+        while 1:
+            x = [i for i in range(num_class)]
+            np.random.shuffle(x)
+            y = [i for i in range(num_class)]
+            np.random.shuffle(y)
+            if sum(np.array(x) == np.array(y)) == 0:
+                break
+        for xx, yy in zip(x, y):
+            split_list.append([xx, yy])
+
+    return split_list
 
 
 # two functions for each type of dataset - one to divide data in iid manner and one in non-iid manner
 
-def mnist_iid(args, dataset, num_users):
+def mnist_iid(args, dataset, num_clients):
     """
     Sample I.I.D. client data from MNIST dataset
     :param dataset:
-    :param num_users:
+    :param num_clients:
     :return: dict of image index
     """
-    num_items = int(len(dataset) / num_users)
-    dict_users, all_idxs = {}, [i for i in range(len(dataset))]
-    for i in range(num_users):
-        dict_users[i] = set(np.random.choice(all_idxs, num_items, replace=False))
-        all_idxs = list(set(all_idxs) - dict_users[i])
-    return dict_users
+    num_items = int(len(dataset) / num_clients)
+    dict_clients, all_idxs = {}, [i for i in range(len(dataset))]
+    for i in range(num_clients):
+        dict_clients[i] = set(np.random.choice(all_idxs, num_items, replace=False))
+        all_idxs = list(set(all_idxs) - dict_clients[i])
+    return dict_clients
 
 
-def mnist_noniid(args, dataset, num_users):
+def mnist_noniid(args, dataset, num_clients):
     """
     Sample non-I.I.D client data from MNIST dataset
     :param dataset:
-    :param num_users:
+    :param num_clients:
     :return:
     """
     num_shards, num_imgs = 200, 300
     idx_shard = [i for i in range(num_shards)]
-    dict_users = {i: np.array([], dtype='int64') for i in range(num_users)}
+    dict_clients = {i: np.array([], dtype='int64') for i in range(num_clients)}
     idxs = np.arange(num_shards * num_imgs)
     labels = dataset.train_labels.numpy()
 
@@ -39,17 +56,17 @@ def mnist_noniid(args, dataset, num_users):
     idxs = idxs_labels[0, :]
 
     # divide and assign
-    for i in range(num_users):
+    for i in range(num_clients):
         rand_set = set(np.random.choice(idx_shard, 2, replace=False))
         idx_shard = list(set(idx_shard) - rand_set)
         for rand in rand_set:
-            dict_users[i] = np.concatenate((dict_users[i], idxs[rand * num_imgs:(rand + 1) * num_imgs]), axis=0)
-    return dict_users
+            dict_clients[i] = np.concatenate((dict_clients[i], idxs[rand * num_imgs:(rand + 1) * num_imgs]), axis=0)
+    return dict_clients
 
 
-def cifar_noniid(args, dataset, num_users):
+def cifar10_noniid(args, dataset, num_clients):
     num_items = int(len(dataset))
-    dict_users = {}
+    dict_clients = {}
     labels = [i for i in range(10)]
     idx = {i: np.array([], dtype='int64') for i in range(10)}
 
@@ -60,44 +77,65 @@ def cifar_noniid(args, dataset, num_users):
         idx[i[1]] = np.append(idx[i[1]], j)
         j += 1
 
-    # if(num_users<=5):
-    #     k = int(10/num_users)
-    #     for i in range(num_users):
-    #         a = 0
-    #         for j in range(i*k,(i+1)*k):
-    #             a += j
-    #             if(j==i*k):
-    #                 dict_users[i] = list(idx[j])
-    #             else:
-    #                 dict_users[i] = np.append(dict_users[i],idx[j])
-    #         print(a)
-    #     return dict_users
-
-    # if k = 4, a particular user can have samples only from at max 4 classes
+    # if k = 4, a particular client can have samples only from at max 4 classes
     k = args.overlapping_classes
     # print(idx)
-    num_examples = int(num_items / (k * num_users))
+    num_examples = int(num_items / (k * num_clients))
 
-    for i in range(num_users):
+    for i in range(num_clients):
         t = 0
         while (t != k):
-            j = random.randint(0, 9)
+            j = np.random.randint(0, 9)
             selected_class = (i + j) % len(labels)
             if (len(idx[selected_class]) >= num_examples):
                 rand_set = set(np.random.choice(idx[selected_class], num_examples, replace=False))
                 idx[selected_class] = list(set(idx[selected_class]) - rand_set)
                 rand_set = list(rand_set)
                 if (t == 0):
-                    dict_users[i] = rand_set
+                    dict_clients[i] = rand_set
                 else:
-                    dict_users[i] = np.append(dict_users[i], rand_set)
+                    dict_clients[i] = np.append(dict_clients[i], rand_set)
                 t += 1
-    return dict_users
+    return dict_clients
 
 
-def cifar100_noniid(args, dataset, num_users):
+def cifar10_noniid_imbalance(args, dataset, client_class_idx=None):
+    num_items = len(dataset)
+    dict_clients = {}
+    labels = np.arange(10)
+    idx_list = [[] for _ in range(10)]
+
+    for idx, i in enumerate(dataset):
+        idx_list[i[1]].append(idx)
+
+    # if k = 4, a particular client can have samples only from at max 4 classes
+    # k = args.overlapping_classes
+    k = 2
+    minority_ratio = 1 / (args.imbalance + 1)
+    minority_sample_num = int(np.ceil(num_items / args.num_clients * minority_ratio))
+    num_examples = [minority_sample_num, int(num_items / args.num_clients - minority_sample_num)]
+
+    if client_class_idx is None:
+        client_class_idx = choose_two_digit_imbalance(10, k)
+
+    for i in range(args.num_clients):
+
+        min_class = idx_list[client_class_idx[i][0]]
+        min_class_idx = set(np.random.choice(min_class, num_examples[0], replace=False))
+        idx_list[client_class_idx[i][0]] = list(set(min_class) - min_class_idx)
+        dict_clients[i] = list(min_class_idx)
+
+        maj_class = idx_list[client_class_idx[i][1]]
+        maj_class_idx = set(np.random.choice(maj_class, num_examples[1], replace=False))
+        idx_list[client_class_idx[i][1]] = list(set(maj_class) - maj_class_idx)
+        dict_clients[i] = np.append(dict_clients[i], list(maj_class_idx))
+
+    return dict_clients, client_class_idx
+
+
+def cifar100_noniid(args, dataset, num_clients):
     num_items = int(len(dataset))
-    dict_users = {}
+    dict_clients = {}
     labels = [i for i in range(100)]
     idx = {i: np.array([], dtype='int64') for i in range(100)}
 
@@ -109,56 +147,56 @@ def cifar100_noniid(args, dataset, num_users):
     # print(idx.keys())
     k = args.overlapping_classes
 
-    num_examples = int(num_items / (k * num_users))
+    num_examples = int(num_items / (k * num_clients))
     # print(num_examples)
 
-    for i in range(num_users):
+    for i in range(num_clients):
         # print(i)
         t = 0
         while (t != k):
-            j = random.randint(0, 99)
+            j = np.random.randint(0, 99)
 
             if (len(idx[(i + j) % len(labels)]) >= num_examples):
                 rand_set = set(np.random.choice(idx[(i + j) % len(labels)], num_examples, replace=False))
                 idx[(i + j) % len(labels)] = list(set(idx[(i + j) % len(labels)]) - rand_set)
                 rand_set = list(rand_set)
                 if (t == 0):
-                    dict_users[i] = rand_set
+                    dict_clients[i] = rand_set
                 else:
-                    dict_users[i] = np.append(dict_users[i], rand_set)
+                    dict_clients[i] = np.append(dict_clients[i], rand_set)
                 t += 1
-    # print(dict_users[0])
-    return dict_users
+    # print(dict_clients[0])
+    return dict_clients
 
 
-def cifar_iid(args, dataset, num_users):
+def cifar_iid(args, dataset, num_clients):
     """
     Sample I.I.D. client data from CIFAR10 dataset
     :param dataset:
-    :param num_users:
+    :param num_clients:
     :return: dict of image index
     """
-    num_items = int(len(dataset) / num_users)
-    dict_users, all_idxs = {}, [i for i in range(len(dataset))]
-    for i in range(num_users):
-        dict_users[i] = set(np.random.choice(all_idxs, num_items, replace=False))
-        all_idxs = list(set(all_idxs) - dict_users[i])
-    return dict_users
+    num_items = int(len(dataset) / num_clients)
+    dict_clients, all_idxs = {}, [i for i in range(len(dataset))]
+    for i in range(num_clients):
+        dict_clients[i] = set(np.random.choice(all_idxs, num_items, replace=False))
+        all_idxs = list(set(all_idxs) - dict_clients[i])
+    return dict_clients
 
 
-def cifar100_iid(args, dataset, num_users):
+def cifar100_iid(args, dataset, num_clients):
     """
     Sample I.I.D. client data from CIFAR10 dataset
     :param dataset:
-    :param num_users:
+    :param num_clients:
     :return: dict of image index
     """
-    num_items = int(len(dataset) / num_users)
-    dict_users, all_idxs = {}, [i for i in range(len(dataset))]
-    for i in range(num_users):
-        dict_users[i] = set(np.random.choice(all_idxs, num_items, replace=False))
-        all_idxs = list(set(all_idxs) - dict_users[i])
-    return dict_users
+    num_items = int(len(dataset) / num_clients)
+    dict_clients, all_idxs = {}, [i for i in range(len(dataset))]
+    for i in range(num_clients):
+        dict_clients[i] = set(np.random.choice(all_idxs, num_items, replace=False))
+        all_idxs = list(set(all_idxs) - dict_clients[i])
+    return dict_clients
 
 
 if __name__ == '__main__':
