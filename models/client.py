@@ -122,7 +122,7 @@ def test_client(args, dataset, test_idx, model):
     with torch.no_grad():
 
         for idx, (data, target) in enumerate(data_loader):
-            if args.gpu != -1:
+            if args.device.type != 'cpu':
                 data, target = data.cuda(), target.cuda()
             log_probs = model(data)
             # sum up batch loss

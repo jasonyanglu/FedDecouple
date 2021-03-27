@@ -28,7 +28,7 @@ def args_parser():
 
     # fl
     parser.add_argument('--num_clients', type=int, default=20)
-    parser.add_argument('--C', type=int, default=0.4)
+    parser.add_argument('--C', type=float, default=0.4)
     parser.add_argument('--num_rounds', type=int, default=100)
     parser.add_argument('--num_local_epochs', type=int, default=20)
     parser.add_argument('--num_local_finetune_epochs', type=int, default=20)
@@ -42,7 +42,7 @@ def args_parser():
     parser.add_argument('--lr', type=float, default=0.1)
 
     # environment
-    parser.add_argument('--gpu', type=str, default='0')
+    parser.add_argument('--gpu', type=int, default=0)
 
     args = parser.parse_args()
 
@@ -120,6 +120,9 @@ def main():
 
         selected_clients = np.random.choice(total_clients, int(args.num_clients * args.C), replace=False)
         print("Selected clients: {}".format(selected_clients))
+
+        test_acc, test_loss = test_client(args, dataset_test, test_clients_idx[i], local_model[i])
+
         for client_i in selected_clients:
             params, loss = train_client(args, dataset_train, train_clients_idx[client_i], model=local_model[client_i])
             local_params.append(params)

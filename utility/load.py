@@ -32,7 +32,7 @@ def load_dataset(args):
         test_dataset = datasets.CIFAR10(args.path_cifar10, train=False, download=True, transform=trans_cifar)
         if args.imbalance != 0:
             train_clients_idx, client_class_idx = cifar10_noniid_imbalance(args, train_dataset)
-            test_clients_idx, _ = cifar10_noniid_imbalance(args, test_dataset, client_class_idx)
+            test_clients_idx, _ = cifar10_noniid(args, test_dataset, client_class_idx)
         else:
             clients_idx = cifar10_noniid(args, train_dataset, args.num_clients)
         args.num_classes = 10

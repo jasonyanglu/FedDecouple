@@ -64,39 +64,36 @@ def mnist_noniid(args, dataset, num_clients):
     return dict_clients
 
 
-def cifar10_noniid(args, dataset, num_clients):
-    num_items = int(len(dataset))
+def cifar10_noniid(args, dataset, client_class_idx=None):
+    num_items = len(dataset)
     dict_clients = {}
-    labels = [i for i in range(10)]
-    idx = {i: np.array([], dtype='int64') for i in range(10)}
+    labels = np.arange(10)
+    idx_list = [[] for _ in range(10)]
 
-    j = 0
-    # print((dataset[0][0]))
-    for i in dataset:
-        # print(i)
-        idx[i[1]] = np.append(idx[i[1]], j)
-        j += 1
+    for idx, i in enumerate(dataset):
+        idx_list[i[1]].append(idx)
 
     # if k = 4, a particular client can have samples only from at max 4 classes
-    k = args.overlapping_classes
-    # print(idx)
-    num_examples = int(num_items / (k * num_clients))
+    # k = args.overlapping_classes
+    k = 2
+    num_examples = int(np.ceil(num_items / args.num_clients / k))
 
-    for i in range(num_clients):
-        t = 0
-        while (t != k):
-            j = np.random.randint(0, 9)
-            selected_class = (i + j) % len(labels)
-            if (len(idx[selected_class]) >= num_examples):
-                rand_set = set(np.random.choice(idx[selected_class], num_examples, replace=False))
-                idx[selected_class] = list(set(idx[selected_class]) - rand_set)
-                rand_set = list(rand_set)
-                if (t == 0):
-                    dict_clients[i] = rand_set
-                else:
-                    dict_clients[i] = np.append(dict_clients[i], rand_set)
-                t += 1
-    return dict_clients
+    if client_class_idx is None:
+        client_class_idx = choose_two_digit_imbalance(10, k)
+
+    for i in range(args.num_clients):
+
+        min_class = idx_list[client_class_idx[i][0]]
+        min_class_idx = set(np.random.choice(min_class, num_examples, replace=False))
+        idx_list[client_class_idx[i][0]] = list(set(min_class) - min_class_idx)
+        dict_clients[i] = list(min_class_idx)
+
+        maj_class = idx_list[client_class_idx[i][1]]
+        maj_class_idx = set(np.random.choice(maj_class, num_examples, replace=False))
+        idx_list[client_class_idx[i][1]] = list(set(maj_class) - maj_class_idx)
+        dict_clients[i] = np.append(dict_clients[i], list(maj_class_idx))
+
+    return dict_clients, client_class_idx
 
 
 def cifar10_noniid_imbalance(args, dataset, client_class_idx=None):
