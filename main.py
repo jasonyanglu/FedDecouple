@@ -11,9 +11,8 @@ import argparse
 from datetime import datetime
 
 from utility.load import load_dataset, load_model
-from models.Update import train_client, test_client, finetune_client
+from models.client import train_client, test_client, finetune_client
 from models.fed import FedAvg
-from models.test import test_img
 
 torch.manual_seed(0)
 
@@ -32,9 +31,9 @@ def args_parser():
     parser.add_argument('--C', type=int, default=0.4)
     parser.add_argument('--num_rounds', type=int, default=100)
     parser.add_argument('--num_local_epochs', type=int, default=20)
+    parser.add_argument('--num_local_finetune_epochs', type=int, default=20)
     parser.add_argument('--finetune', type=bool, default=False)
     parser.add_argument('--base_layers', type=int, default=216)
-
 
     # train
     parser.add_argument('--model', type=str, default='resnet')
@@ -62,12 +61,16 @@ def main():
 
     # Taking hash of config values and using it as filename for storing model parameters and logs
     param_str = str(args)
-    file_name = datetime.now().strftime("%Y%m%d%H%M%S")
+    file_name = datetime.now().strftime("%Y%m%d-%H%M%S")
 
     # Save configurations by making a file using hash value
+    if not os.path.exists('./config'):
+        os.makedirs('./config')
     with open('./config/parser_{}.txt'.format(file_name), 'w') as outfile:
         json.dump(args.__dict__, outfile, indent=4)
 
+    if not os.path.exists('./results'):
+        os.makedirs('./results')
     SUMMARY = os.path.join('./results', file_name)
     args.summary = SUMMARY
     if not os.path.exists(SUMMARY):
@@ -87,6 +90,8 @@ def main():
     global_params = global_model.state_dict()
 
     # Set up log file
+    if not os.path.exists('./log'):
+        os.makedirs('./log')
     logging.basicConfig(filename='./log/{}.log'.format(file_name), format='%(message)s', level=logging.DEBUG)
 
     tree = lambda: defaultdict(tree)
@@ -136,15 +141,13 @@ def main():
             local_model[selected_clients[client_i]].load_state_dict(local_params[client_i])
 
         # store train and test accuracies after updating local models
-        logging.info("Testing Client Models after aggregation")
-        logging.info("")
         avg_test_acc = 0
         for i in selected_clients:
-            # logging.info("Client {}:".format(i))
-            train_acc, train_loss = test_client(args, dataset_train, train_clients_idx[i], local_model[i])
+            logging.info("Client {}:".format(i))
+            # train_acc, train_loss = test_client(args, dataset_train, train_clients_idx[i], local_model[i])
             test_acc, test_loss = test_client(args, dataset_test, test_clients_idx[i], local_model[i])
             # logging.info("Training accuracy: {:.3f}".format(train_acc))
-            # logging.info("Testing accuracy: {:.3f}".format(test_acc))
+            logging.info("Test accuracy: {:.3f}".format(test_acc))
             # logging.info("")
             # stats[i][round_i]['After Training accuracy'] = train_acc
             # stats[i][round_i]['After Test accuracy'] = test_acc
@@ -153,19 +156,19 @@ def main():
 
             avg_test_acc += test_acc
         avg_test_acc /= len(selected_clients)
-        logging.info("Average Client accuracy on their test data: {: .3f}".format(avg_test_acc))
+        logging.info("Average test accuracy: {: .3f}".format(avg_test_acc))
 
         stats['After Average'][round_i] = avg_test_acc
         writer.add_scalar('Average' + '/After Test accuracy', avg_test_acc, round_i)
 
         avg_loss = sum(local_loss) / len(local_loss)
-        logging.info('Average loss of clients: {:.3f}'.format(avg_loss))
+        logging.info('Average training loss: {:.3f}'.format(avg_loss))
 
         ###FineTuning
         if args.finetune:
             # print("FineTuning")
             personal_params = list(global_params.keys())[base_layers:]
-            for client_i in range(0, args.num_clients):
+            for client_i in selected_clients:
                 for i, param in enumerate(local_model[client_i].named_parameters()):
                     if param[0] not in personal_params:
                         param[1].requires_grad = False
@@ -203,59 +206,6 @@ def main():
     torch.save(global_model.state_dict(), './state_dict/server_{}.pt'.format(file_name))
     for i in range(args.num_clients):
         torch.save(local_model[i].state_dict(), './state_dict/client_{}_{}.pt'.format(i, file_name))
-
-    # # test global model on training set and testing set
-    #
-    # logging.info("")
-    # logging.info("Testing")
-    #
-    # logging.info("Global Server Model")
-    # global_model.eval()
-    # train_acc, train_loss = test_img(global_model, dataset_train, args)
-    # test_acc, test_loss = test_img(global_model, dataset_test, args)
-    # logging.info("Training accuracy of Server: {:.3f}".format(train_acc))
-    # logging.info("Training loss of Server: {:.3f}".format(train_loss))
-    # logging.info("Testing accuracy of Server: {:.3f}".format(test_acc))
-    # logging.info("Testing loss of Server: {:.3f}".format(test_loss))
-    # logging.info("End of Server Model Testing")
-    # logging.info("")
-    #
-    # logging.info("Client Models")
-    # avg_test_acc = 0
-    # # testing local models
-    # for i in range(args.num_clients):
-    #     logging.info("Client {}:".format(i))
-    #     train_acc, train_loss = test_client(args, dataset_train, train_clients_idx[i], local_model[i])
-    #     test_acc, test_loss = test_client(args, dataset_test, test_clients_idx[i], local_model[i])
-    #     logging.info("Training accuracy: {:.3f}".format(train_acc))
-    #     logging.info("Training loss: {:.3f}".format(train_loss))
-    #     logging.info("Testing accuracy: {:.3f}".format(test_acc))
-    #     logging.info("Testing loss: {:.3f}".format(test_loss))
-    #     logging.info("")
-    #     avg_test_acc += test_acc
-    # avg_test_acc /= args.num_clients
-    # logging.info("Average Client accuracy on their test data: {: .3f}".format(avg_test_acc))
-    # logging.info("End of Client Model testing")
-    #
-    # logging.info("")
-    # logging.info("Testing global model on individual client's test data")
-    #
-    # # testing global model on individual client's test data
-    # avg_test_acc = 0
-    # for i in range(args.num_clients):
-    #     logging.info("Client {}".format(i))
-    #     train_acc, train_loss = test_client(args, dataset_train, train_clients_idx[i], global_model)
-    #     test_acc, test_loss = test_client(args, dataset_test, test_clients_idx[i], global_model)
-    #     logging.info("Training accuracy: {:.3f}".format(train_acc))
-    #     logging.info("Testing accuracy: {:.3f}".format(test_acc))
-    #     avg_test_acc += test_acc
-    # avg_test_acc /= args.num_clients
-    # logging.info("Average Client accuracy of global model on each client's test data: {: .3f}".format(avg_test_acc))
-    #
-    # dill.dump(stats, open(os.path.join(args.summary, 'stats.pkl'), 'wb'))
-    # writer.close()
-    # # print(stats['After Average'])
-    # # print(stats['After finetune Average'])
 
 
 if __name__ == '__main__':

@@ -64,36 +64,25 @@ def train_client(args, dataset, train_idx, model):
 def finetune_client(args, dataset, train_idx, model):
     '''
 
-    Train individual client models
-
-    Parameters:
-
-        model (state_dict) : Client Model
-
-        datatest (dataset) : Complete dataset loaded by the Dataloader
-
-        args (dictionary) : The list of arguments defined by the user
-
-        train_idx (list) : List of indices of those samples from the actual complete dataset that are there in the local training dataset of this client
-
-    Returns:
-
+    :param args: The list of arguments defined by the user
+    :param dataset: Complete dataset loaded by the Dataloader
+    :param train_idx: List of indices of those samples from the actual complete dataset that are there in the local training dataset of this client
+    :param model: Client Model
+    :return:
         net.state_dict() (state_dict) : The updated weights of the client model
-
         train_loss (float) : Cumulative loss while training
-
     '''
 
     loss_func = nn.CrossEntropyLoss()
     train_idx = list(train_idx)
-    ldr_train = DataLoader(DatasetSplit(dataset, train_idx), batch_size=args.local_bs, shuffle=True)
+    ldr_train = DataLoader(DatasetSplit(dataset, train_idx), batch_size=args.train_batch_size, shuffle=True)
     model.train()
 
     # train and update
     optimizer = torch.optim.SGD(model.parameters(), lr=args.lr)
     epoch_loss = []
 
-    for iter in range(1):
+    for epoch_i in range(args.num_local_finetune_epochs):
         batch_loss = []
 
         for batch_idx, (images, labels) in enumerate(ldr_train):
