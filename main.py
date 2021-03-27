@@ -128,22 +128,8 @@ def main():
             local_params.append(params)
             local_loss.append(copy.deepcopy(loss))
 
-        # hyperparameter = number of layers we want to keep in the base part
-        base_layers = args.base_layers
 
-        # update global weights
-        global_params = FedAvg(local_params)
-
-        # copy weight to global_model
-        global_model.load_state_dict(global_params)
-
-        # Updating base layers of the clients and keeping the personalized layers same
-        for client_i in range(len(selected_clients)):
-            for param_name in list(global_params.keys())[0:base_layers]:
-                local_params[client_i][param_name] = copy.deepcopy(global_params[param_name])
-            local_model[selected_clients[client_i]].load_state_dict(local_params[client_i])
-
-        # store train and test accuracies after updating local models
+        # store train and test accuracies before updating local models
         avg_test_acc = 0
         for i in selected_clients:
             # logging.info("Client {}:".format(i))
@@ -166,6 +152,22 @@ def main():
 
         avg_loss = sum(local_loss) / len(local_loss)
         logging.info('Average training loss: {:.3f}'.format(avg_loss))
+
+        # update base layers
+        # hyperparameter = number of layers we want to keep in the base part
+        base_layers = args.base_layers
+
+        # update global weights
+        global_params = FedAvg(local_params)
+
+        # copy weight to global_model
+        global_model.load_state_dict(global_params)
+
+        # Updating base layers of the clients and keeping the personalized layers same
+        for client_i in range(len(selected_clients)):
+            for param_name in list(global_params.keys())[0:base_layers]:
+                local_params[client_i][param_name] = copy.deepcopy(global_params[param_name])
+            local_model[selected_clients[client_i]].load_state_dict(local_params[client_i])
 
         ###FineTuning
         if args.finetune:
