@@ -153,10 +153,10 @@ def main():
         global_model.load_state_dict(global_params)
 
         # Updating base layers of the clients and keeping the personalized layers same
-        for idx in selected_clients:
-            for i in list(global_params.keys())[0:base_layers]:
-                local_params[idx][i] = copy.deepcopy(global_params[i])
-            local_model[idx].load_state_dict(local_params[idx])
+        for client_i in range(len(selected_clients)):
+            for param_name in list(global_params.keys())[0:base_layers]:
+                local_params[client_i][param_name] = copy.deepcopy(global_params[param_name])
+            local_model[selected_clients[client_i]].load_state_dict(local_params[client_i])
 
         # store train and test accuracies after updating local models
         logging.info("Testing Client Models after aggregation")
@@ -189,12 +189,12 @@ def main():
         if args.finetune:
             # print("FineTuning")
             personal_params = list(global_params.keys())[base_layers:]
-            for idx in range(0, args.num_clients):
-                for i, param in enumerate(local_model[idx].named_parameters()):
+            for client_i in range(0, args.num_clients):
+                for i, param in enumerate(local_model[client_i].named_parameters()):
                     if param[0] not in personal_params:
                         param[1].requires_grad = False
-                params, loss = finetune_client(args, dataset_train, train_clients_idx[idx], model=local_model[idx])
-                for i, param in enumerate(local_model[idx].named_parameters()):
+                params, loss = finetune_client(args, dataset_train, train_clients_idx[client_i], model=local_model[client_i])
+                for i, param in enumerate(local_model[client_i].named_parameters()):
                     if param[0] not in personal_params:
                         param[1].requires_grad = True
 
