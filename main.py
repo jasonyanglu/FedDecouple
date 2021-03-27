@@ -33,6 +33,8 @@ def args_parser():
     parser.add_argument('--num_rounds', type=int, default=100)
     parser.add_argument('--num_local_epochs', type=int, default=20)
     parser.add_argument('--finetune', type=str, default='false')
+    parser.add_argument('--base_layers', type=int, default=216)
+
 
     # train
     parser.add_argument('--model', type=str, default='resnet')
@@ -122,7 +124,7 @@ def main():
         logging.info("Testing Client Models before aggregation")
         logging.info("")
         avg_test_acc = 0
-        for i in range(args.num_clients):
+        for i in selected_clients:
             logging.info("Client {}:".format(i))
             train_acc, train_loss = test_client(args, dataset_train, train_clients_idx[i], local_model[i])
             test_acc, test_loss = test_client(args, dataset_train, test_clients_idx[i], local_model[i])
@@ -151,7 +153,7 @@ def main():
         global_model.load_state_dict(global_params)
 
         # Updating base layers of the clients and keeping the personalized layers same
-        for idx in range(args.num_clients):
+        for idx in selected_clients:
             for i in list(global_params.keys())[0:base_layers]:
                 local_params[idx][i] = copy.deepcopy(global_params[i])
             local_model[idx].load_state_dict(local_params[idx])
@@ -160,7 +162,7 @@ def main():
         logging.info("Testing Client Models after aggregation")
         logging.info("")
         avg_test_acc = 0
-        for i in range(args.num_clients):
+        for i in selected_clients:
             logging.info("Client {}:".format(i))
             train_acc, train_loss = test_client(args, dataset_train, train_clients_idx[i], local_model[i])
             test_acc, test_loss = test_client(args, dataset_test, test_clients_idx[i], local_model[i])
@@ -174,7 +176,7 @@ def main():
             writer.add_scalar(str(i) + '/After Test accuracy', test_acc, round_i)
 
             avg_test_acc += test_acc
-        avg_test_acc /= args.num_clients
+        avg_test_acc /= len(selected_clients)
         logging.info("Average Client accuracy on their test data: {: .3f}".format(avg_test_acc))
 
         stats['After Average'][round_i] = avg_test_acc
