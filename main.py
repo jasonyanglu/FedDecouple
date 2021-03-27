@@ -107,7 +107,7 @@ def main():
         local_params, local_loss = [], []
 
         selected_clients = np.random.choice(total_clients, int(args.num_clients * args.C), replace=False)
-
+        print("Selected clients: {}".format(selected_clients))
         for client_i in range(args.num_clients):
             params, loss = train_client(args, dataset_train, train_clients_idx[client_i], model=local_model[client_i])
             local_params.append(params)
