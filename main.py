@@ -4,7 +4,7 @@ import logging
 import json
 import copy
 import os
-import sys
+import numpy as np
 from collections import defaultdict
 from torch.utils.tensorboard import SummaryWriter
 import argparse
@@ -24,7 +24,7 @@ def args_parser():
     parser.add_argument('--path_cifar10', type=str, default=os.path.join('../data/cifar10/'))
     parser.add_argument('--path_cifar100', type=str, default=os.path.join('../data/cifar100/'))
     parser.add_argument('--num_clients', type=int, default=20)
-    parser.add_argument('--num_online_clients', type=int, default=8)
+    parser.add_argument('--C', type=int, default=0.4)
     parser.add_argument('--num_rounds', type=int, default=100)
     parser.add_argument('--num_local_epochs', type=int, default=20)
     parser.add_argument('--total_steps', type=int, default=100)
@@ -98,12 +98,15 @@ def main():
     # Start training
     logging.info("Training")
     start = time.time()
+    total_clients = list(range(args.num_clients))
 
     for round_i in range(args.num_rounds):
 
         print('Round {}'.format(round_i))
         logging.info("---------Round {}---------".format(round_i))
         local_params, local_loss = [], []
+
+        selected_clients = np.random.choice(total_clients, int(args.num_clients * args.C), replace=False)
 
         for client_i in range(args.num_clients):
             params, loss = train_client(args, dataset_train, train_clients_idx[client_i], model=local_model[client_i])
