@@ -32,7 +32,7 @@ def args_parser():
     parser.add_argument('--C', type=int, default=0.4)
     parser.add_argument('--num_rounds', type=int, default=100)
     parser.add_argument('--num_local_epochs', type=int, default=20)
-    parser.add_argument('--finetune', type=str, default='false')
+    parser.add_argument('--finetune', type=bool, default=False)
     parser.add_argument('--base_layers', type=int, default=216)
 
 
@@ -120,29 +120,6 @@ def main():
             local_params.append(params)
             local_loss.append(copy.deepcopy(loss))
 
-        # store testing and training accuracies of the model before global aggregation
-        logging.info("Testing Client Models before aggregation")
-        logging.info("")
-        avg_test_acc = 0
-        for i in selected_clients:
-            logging.info("Client {}:".format(i))
-            train_acc, train_loss = test_client(args, dataset_train, train_clients_idx[i], local_model[i])
-            test_acc, test_loss = test_client(args, dataset_train, test_clients_idx[i], local_model[i])
-            logging.info("Training accuracy: {:.3f}".format(train_acc))
-            logging.info("Testing accuracy: {:.3f}".format(test_acc))
-            logging.info("")
-            # print(acc_test)
-            stats[i][round_i]['Before Training accuracy'] = train_acc
-            stats[i][round_i]['Before Test accuracy'] = test_acc
-            writer.add_scalar(str(i) + '/Before Training accuracy', train_acc, round_i)
-            writer.add_scalar(str(i) + '/Before Test accuracy', test_acc, round_i)
-
-            avg_test_acc += test_acc
-        avg_test_acc /= args.num_clients
-        logging.info("Average Client accuracy on their test data: {: .3f}".format(avg_test_acc))
-        stats['Before Average'][round_i] = avg_test_acc
-        writer.add_scalar('Average' + '/Before Test accuracy', avg_test_acc, round_i)
-
         # hyperparameter = number of layers we want to keep in the base part
         base_layers = args.base_layers
 
@@ -163,17 +140,16 @@ def main():
         logging.info("")
         avg_test_acc = 0
         for i in selected_clients:
-            logging.info("Client {}:".format(i))
+            # logging.info("Client {}:".format(i))
             train_acc, train_loss = test_client(args, dataset_train, train_clients_idx[i], local_model[i])
             test_acc, test_loss = test_client(args, dataset_test, test_clients_idx[i], local_model[i])
-            logging.info("Training accuracy: {:.3f}".format(train_acc))
-            logging.info("Testing accuracy: {:.3f}".format(test_acc))
-            logging.info("")
-
-            stats[i][round_i]['After Training accuracy'] = train_acc
-            stats[i][round_i]['After Test accuracy'] = test_acc
-            writer.add_scalar(str(i) + '/After Training accuracy', train_acc, round_i)
-            writer.add_scalar(str(i) + '/After Test accuracy', test_acc, round_i)
+            # logging.info("Training accuracy: {:.3f}".format(train_acc))
+            # logging.info("Testing accuracy: {:.3f}".format(test_acc))
+            # logging.info("")
+            # stats[i][round_i]['After Training accuracy'] = train_acc
+            # stats[i][round_i]['After Test accuracy'] = test_acc
+            # writer.add_scalar(str(i) + '/After Training accuracy', train_acc, round_i)
+            # writer.add_scalar(str(i) + '/After Test accuracy', test_acc, round_i)
 
             avg_test_acc += test_acc
         avg_test_acc /= len(selected_clients)
