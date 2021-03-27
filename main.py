@@ -7,7 +7,6 @@ import os
 import sys
 from collections import defaultdict
 from torch.utils.tensorboard import SummaryWriter
-import dill
 import argparse
 from datetime import datetime
 
