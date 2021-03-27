@@ -20,23 +20,28 @@ torch.manual_seed(0)
 
 def args_parser():
     parser = argparse.ArgumentParser()
+
+    # dataset
     parser.add_argument('--dataset', type=str, default='cifar10')
     parser.add_argument('--path_cifar10', type=str, default=os.path.join('../data/cifar10/'))
     parser.add_argument('--path_cifar100', type=str, default=os.path.join('../data/cifar100/'))
+    parser.add_argument('--imbalance', type=int, default=10)
+
+    # fl
     parser.add_argument('--num_clients', type=int, default=20)
     parser.add_argument('--C', type=int, default=0.4)
     parser.add_argument('--num_rounds', type=int, default=100)
     parser.add_argument('--num_local_epochs', type=int, default=20)
-    parser.add_argument('--total_steps', type=int, default=100)
-    parser.add_argument('--server_steps', type=int, default=100)
-    parser.add_argument('--train_batch_size', type=int, default=128)
-    parser.add_argument('--test_batch_size', type=int, default=500)
-    parser.add_argument('--lr_global_teaching', type=float, default=0.001)
-    parser.add_argument('--lr', type=float, default=0.1)
-    parser.add_argument('--gpu', type=str, default='0')
-    parser.add_argument('--imbalance', type=int, default=10)
-    parser.add_argument('--model', type=str, default='resnet')
     parser.add_argument('--finetune', type=str, default='false')
+
+    # train
+    parser.add_argument('--model', type=str, default='resnet')
+    parser.add_argument('--train_batch_size', type=int, default=64)
+    parser.add_argument('--test_batch_size', type=int, default=500)
+    parser.add_argument('--lr', type=float, default=0.1)
+
+    # environment
+    parser.add_argument('--gpu', type=str, default='0')
 
     args = parser.parse_args()
 
@@ -108,7 +113,7 @@ def main():
 
         selected_clients = np.random.choice(total_clients, int(args.num_clients * args.C), replace=False)
         print("Selected clients: {}".format(selected_clients))
-        for client_i in range(args.num_clients):
+        for client_i in selected_clients:
             params, loss = train_client(args, dataset_train, train_clients_idx[client_i], model=local_model[client_i])
             local_params.append(params)
             local_loss.append(copy.deepcopy(loss))
