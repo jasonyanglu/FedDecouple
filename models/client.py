@@ -1,6 +1,6 @@
 import torch
 from torch import nn, autograd
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import DataLoader, Dataset, WeightedRandomSampler
 import numpy as np
 import random
 from sklearn import metrics
@@ -8,6 +8,16 @@ import random
 import matplotlib.pyplot as plt
 import torch.nn.functional as F
 
+
+
+def get_class_distribution(dataset_obj):
+    idx2class = {v: k for k, v in dataset_obj.class_to_idx.items()}
+    count_dict = {k: 0 for k, v in dataset_obj.class_to_idx.items()}
+    for element in dataset_obj:
+        y_lbl = element[1]
+        y_lbl = idx2class[y_lbl]
+        count_dict[y_lbl] += 1
+    return count_dict
 
 class DatasetSplit(Dataset):
     """
@@ -26,7 +36,8 @@ class DatasetSplit(Dataset):
         return image, label
 
 
-def train_client(args, dataset, train_idx, model):
+
+def train_client(args, dataset, model):
     '''
     :param args: The list of arguments defined by the user
     :param dataset: Complete dataset loaded by the Dataloader
@@ -36,8 +47,8 @@ def train_client(args, dataset, train_idx, model):
     '''
 
     loss_func = nn.CrossEntropyLoss()
-    train_idx = list(train_idx)
-    train_loader = DataLoader(DatasetSplit(dataset, train_idx), batch_size=args.train_batch_size, shuffle=True)
+    #train_idx = list(train_idx)
+    train_loader = DataLoader(dataset, batch_size=args.train_batch_size, shuffle=True)
     model.train()
 
     # train and update
@@ -48,9 +59,11 @@ def train_client(args, dataset, train_idx, model):
         batch_loss = []
 
         for batch_idx, (images, labels) in enumerate(train_loader):
+
             images, labels = images.to(args.device), labels.to(args.device)
             optimizer.zero_grad()
-            log_probs = model(images)
+            log_probs = model(images,classifier_cb=True)
+            
             loss = loss_func(log_probs, labels)
             loss.backward()
             optimizer.step()
@@ -61,7 +74,7 @@ def train_client(args, dataset, train_idx, model):
     return model.state_dict(), sum(epoch_loss) / len(epoch_loss)
 
 
-def finetune_client(args, dataset, train_idx, model):
+def finetune_client(args, dataset, model):
     '''
 
     :param args: The list of arguments defined by the user
@@ -72,26 +85,45 @@ def finetune_client(args, dataset, train_idx, model):
         net.state_dict() (state_dict) : The updated weights of the client model
         train_loss (float) : Cumulative loss while training
     '''
-
+    #criterion = nn.CrossEntropyLoss()
+    
     loss_func = nn.CrossEntropyLoss()
-    train_idx = list(train_idx)
-    train_loader = DataLoader(DatasetSplit(dataset, train_idx), batch_size=args.train_batch_size, shuffle=True)
+    #train_idx = list(train_idx)
+
+    # construct sampler
+    target_list = torch.tensor(dataset.dataset.targets)
+    target_list = target_list[torch.randperm(len(target_list))]
+    class_count = [i for i in get_class_distribution(dataset.dataset).values()]
+    class_weights = 1./torch.tensor(class_count, dtype = torch.float)
+    class_weights_all = class_weights[target_list]
+    Weighted_sampler = WeightedRandomSampler(weights=class_weights_all, num_samples=len(class_weights_all),replacement=True)
+
+    train_loader1 = DataLoader(dataset, batch_size=args.train_batch_size, shuffle=True)
+    train_loader2 = DataLoader(dataset, batch_size=args.train_batch_size, shuffle=False,sampler=Weighted_sampler)
     model.train()
+    
 
     # train and update
     optimizer = torch.optim.SGD(model.parameters(), lr=args.lr)
+    
     epoch_loss = []
 
     for epoch_i in range(args.num_local_finetune_epochs):
         batch_loss = []
 
-        for batch_idx, (images, labels) in enumerate(train_loader):
-            images, labels = images.to(args.device), labels.to(args.device)
+        for batch_idx, images_labels in enumerate(zip(train_loader1,train_loader1)):
+            images1, labels1 = images_labels[0][0].to(args.device), images_labels[0][1].to(args.device)
+            images2, labels2 = images_labels[1][0].to(args.device), images_labels[1][1].to(args.device)
             optimizer.zero_grad()
-            log_probs = model(images)
-            loss = loss_func(log_probs, labels)
+            
+            log_probs1 = model(images1,classifier_cb=True)
+            log_probs2 = model(images2,classifier_rb=True)
+            loss1 = loss_func(log_probs1, labels1)
+            loss2 = loss_func(log_probs2, labels2)
+            loss = 0.5 * loss1 + 0.5 * loss2
             loss.backward()
             optimizer.step()
+            
 
             batch_loss.append(loss.item())
         epoch_loss.append(sum(batch_loss) / len(batch_loss))
@@ -124,7 +156,9 @@ def test_client(args, dataset, test_idx, model):
         for idx, (data, target) in enumerate(data_loader):
             if args.device.type != 'cpu':
                 data, target = data.cuda(), target.cuda()
-            log_probs = model(data)
+            log_probs1 = model(data,classifier_cb=True)
+            log_probs2 = model(data,classifier_rb=True)
+            log_probs = 0.5 * log_probs1 + 0.5 * log_probs2
             # sum up batch loss
             test_loss += F.cross_entropy(log_probs, target, reduction='sum').item()
             # get the index of the max log-probability

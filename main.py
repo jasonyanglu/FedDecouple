@@ -8,11 +8,13 @@ import numpy as np
 from collections import defaultdict
 from torch.utils.tensorboard import SummaryWriter
 import argparse
+
 from datetime import datetime
 
 from utility.load import load_dataset, load_model
-from models.client import train_client, test_client, finetune_client
+from models.client import train_client, test_client, finetune_client, DatasetSplit
 from models.fed import FedAvg
+import matplotlib.pyplot as plt
 
 torch.manual_seed(0)
 
@@ -36,7 +38,7 @@ def args_parser():
     parser.add_argument('--base_layers', type=int, default=216)
 
     # train
-    parser.add_argument('--model', type=str, default='resnet')
+    parser.add_argument('--model', type=str, default='cnn')
     parser.add_argument('--train_batch_size', type=int, default=64)
     parser.add_argument('--test_batch_size', type=int, default=500)
     parser.add_argument('--lr', type=float, default=0.1)
@@ -100,6 +102,7 @@ def main():
 
     # exit()
     # local models for each client
+
     local_model = {}
 
     for i in range(0, args.num_clients):
@@ -107,11 +110,15 @@ def main():
         local_model[i].train()
         local_model[i].load_state_dict(global_params)
 
+    
+
+    
     # Start training
     logging.info("Training")
     start = time.time()
     total_clients = list(range(args.num_clients))
-
+    acc_test = []
+    loss_test = []
     for round_i in range(args.num_rounds):
 
         print('Round {}'.format(round_i))
@@ -121,20 +128,30 @@ def main():
         selected_clients = np.random.choice(total_clients, int(args.num_clients * args.C), replace=False)
         print("Selected clients: {}".format(selected_clients))
 
-        test_acc, test_loss = test_client(args, dataset_test, test_clients_idx[i], local_model[i])
+        # test_acc, test_loss = test_client(args, dataset_test, test_clients_idx[i], local_model[i])
 
         for client_i in selected_clients:
-            params, loss = train_client(args, dataset_train, train_clients_idx[client_i], model=local_model[client_i])
+
+            data_splited = DatasetSplit(dataset_train, train_clients_idx[client_i])
+            params, loss = train_client(args, data_splited, model=local_model[client_i])
             local_params.append(params)
             local_loss.append(copy.deepcopy(loss))
 
-
+            '''
+            child_counter = 0
+            for child in local_model[i].children():
+                print(" child", child_counter, "is:")
+                print(child)
+                child_counter +=1
+            '''
         # store train and test accuracies before updating local models
         avg_test_acc = 0
         for i in selected_clients:
             # logging.info("Client {}:".format(i))
             # train_acc, train_loss = test_client(args, dataset_train, train_clients_idx[i], local_model[i])
             test_acc, test_loss = test_client(args, dataset_test, test_clients_idx[i], local_model[i])
+            
+            
             # logging.info("Training accuracy: {:.3f}".format(train_acc))
             # logging.info("Test accuracy: {:.3f}".format(test_acc))
             # logging.info("")
@@ -155,7 +172,7 @@ def main():
 
         # update base layers
         # hyperparameter = number of layers we want to keep in the base part
-        base_layers = args.base_layers
+        #base_layers = args.base_layers
 
         # update global weights
         global_params = FedAvg(local_params)
@@ -165,24 +182,30 @@ def main():
 
         # Updating base layers of the clients and keeping the personalized layers same
         for client_i in range(len(selected_clients)):
-            for param_name in list(global_params.keys())[0:base_layers]:
+            
+            for param_name in list(global_params.keys())[0:4]:
                 local_params[client_i][param_name] = copy.deepcopy(global_params[param_name])
             local_model[selected_clients[client_i]].load_state_dict(local_params[client_i])
 
         ###FineTuning
         if args.finetune:
-            # print("FineTuning")
-            personal_params = list(global_params.keys())[base_layers:]
+            #print("FineTuning")
+            
+            personal_params = list(global_params.keys())[4:]
+            #personal_params= np.append(personal_params, list(global_params.keys())[10:])
+            
             for client_i in selected_clients:
                 for i, param in enumerate(local_model[client_i].named_parameters()):
                     if param[0] not in personal_params:
                         param[1].requires_grad = False
-                params, loss = finetune_client(args, dataset_train, train_clients_idx[client_i], model=local_model[client_i])
+                data_splited = DatasetSplit(dataset_train, train_clients_idx[client_i])
+                params, loss = finetune_client(args, data_splited, model=local_model[client_i])
                 for i, param in enumerate(local_model[client_i].named_parameters()):
                     if param[0] not in personal_params:
                         param[1].requires_grad = True
 
             avg_test_acc = 0
+            avg_test_loss = 0
             for i in selected_clients:
                 # logging.info("Client {}:".format(i))
                 # train_acc, train_loss = test_client(args, dataset_train, train_clients_idx[i], local_model[i])
@@ -197,9 +220,12 @@ def main():
                 # writer.add_scalar(str(i) + '/After finetune Test accuracy', test_acc, round_i)
 
                 avg_test_acc += test_acc
+                avg_test_loss += test_loss
             avg_test_acc /= len(selected_clients)
+            avg_test_loss /= len(selected_clients)
             logging.info("Finetuned average test accuracy: {: .3f}".format(avg_test_acc))
-
+            acc_test.append(avg_test_acc)
+            loss_test.append(avg_test_loss)
             stats['After finetune Average'][round_i] = avg_test_acc
 
     end = time.time()
@@ -207,10 +233,22 @@ def main():
     logging.info("Training Time: {}s".format(end - start))
     logging.info("End of Training")
 
+    plt.figure()
+    plt.plot(range(len(acc_test)),acc_test)
+    plt.ylabel('test_accuracy')
+    plt.savefig('./save/fed_{}_{}_{}_C{}.png',format(args.dataset, args.model, args.num_rounds, args.frac))
+
+    plt.figure()
+    plt.plot(range(len(loss_test)),loss_test)
+    plt.ylabel('test_loss')
+    plt.savefig('./save/fed_{}_{}_{}_C{}.png',format(args.dataset, args.model, args.num_rounds, args.frac))
+
     # save model parameters
     torch.save(global_model.state_dict(), './state_dict/server_{}.pt'.format(file_name))
     for i in range(args.num_clients):
         torch.save(local_model[i].state_dict(), './state_dict/client_{}_{}.pt'.format(i, file_name))
+    
+
 
 
 if __name__ == '__main__':

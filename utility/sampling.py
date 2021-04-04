@@ -129,6 +129,74 @@ def cifar10_noniid_imbalance(args, dataset, client_class_idx=None):
 
     return dict_clients, client_class_idx
 
+def cifar10_longtailed(args, dataset, imb_factor):
+    num_class = 10
+    num_items = len(dataset)
+    dict_clients = [[] for i in range(args.num_clients)]
+   
+    #keyList = [i for i in range(args.num_clients)]
+    #for i in keyList:
+    #    dict_clients[i] = 0
+    #labels = np.arange(10)
+    idx_list = [[] for _ in range(10)]
+    current_list = []
+    classes = [i for i in range(10)]
+    #client_class_idx = [classes for _ in range(args.num_clients)]
+    for idx, i in enumerate(dataset):
+        idx_list[i[1]].append(idx)
+    
+    img_max = int(np.ceil(num_items / (num_class)))
+    img_num_per_class = []
+    num_total = 0
+    for cls_idx in range(num_class):
+        num = img_max * (imb_factor**(cls_idx / (num_class - 1.0)))
+        num_total += num
+        img_num_per_class.append(int(num))
+    
+    
+    for the_class, the_img_num in zip(classes, img_num_per_class):
+        current_class = idx_list[the_class]
+        class_idx = set(np.random.choice(current_class, the_img_num, replace=False))
+        idx_list[the_class] = list(set(current_class) - class_idx)
+        if current_list == []:
+            current_list = list(class_idx)
+        else:
+            current_list = np.append(current_list, list(class_idx))
+        
+    
+    for i in range(args.num_clients):
+        current_client = set(np.random.choice(current_list, int(num_total//args.num_clients), replace=False))
+        current_list = list(set(current_list) - current_client)
+        if dict_clients[i] == []:
+            dict_clients[i] = list(current_client)
+        else:
+            dict_clients[i] = np.append(dict_clients[i], list(current_client))
+
+    
+    '''
+    img_client = []
+    for i in range(args.num_clients):
+        img_client.append(img_num_per_class)
+        np.random.shuffle(img_num_per_class)
+    
+    for i in range(args.num_clients):
+        for the_class, the_img_num in zip(classes, img_client[i]):
+            current_class = idx_list[the_class]
+            class_idx = set(np.random.choice(current_class, the_img_num, replace=False))
+            idx_list[the_class] = list(set(current_class) - class_idx)
+            if dict_clients[i] == []:
+                dict_clients[i] = list(class_idx)
+            else:
+                dict_clients[i] = np.append(dict_clients[i], list(class_idx))
+    '''        
+
+    
+    return dict_clients, classes
+
+    
+    
+
+    
 
 def cifar100_noniid(args, dataset, num_clients):
     num_items = int(len(dataset))
