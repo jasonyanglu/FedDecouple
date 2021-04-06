@@ -150,7 +150,7 @@ def cifar10_longtailed(args, dataset, imb_factor):
     num_total = 0
     for cls_idx in range(num_class):
         num = img_max * (imb_factor**(cls_idx / (num_class - 1.0)))
-        num_total += num
+        num_total += np.floor(num)
         img_num_per_class.append(int(num))
     
     
@@ -165,6 +165,7 @@ def cifar10_longtailed(args, dataset, imb_factor):
         
     
     for i in range(args.num_clients):
+
         current_client = set(np.random.choice(current_list, int(num_total//args.num_clients), replace=False))
         current_list = list(set(current_list) - current_client)
         if dict_clients[i] == []:

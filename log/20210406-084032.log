@@ -1,0 +1,234 @@
+Training
+---------Round 0---------
+Average test accuracy:  15.650
+Average training loss: 1.588
+Finetuned average test accuracy:  15.650
+---------Round 1---------
+Average test accuracy:  19.825
+Average training loss: 1.476
+Finetuned average test accuracy:  19.825
+---------Round 2---------
+Average test accuracy:  18.200
+Average training loss: 1.405
+Finetuned average test accuracy:  18.200
+---------Round 3---------
+Average test accuracy:  20.950
+Average training loss: 1.264
+Finetuned average test accuracy:  20.950
+---------Round 4---------
+Average test accuracy:  22.775
+Average training loss: 1.141
+Finetuned average test accuracy:  22.775
+---------Round 5---------
+Average test accuracy:  23.725
+Average training loss: 1.144
+Finetuned average test accuracy:  23.725
+---------Round 6---------
+Average test accuracy:  21.425
+Average training loss: 1.129
+Finetuned average test accuracy:  21.425
+---------Round 7---------
+Average test accuracy:  25.525
+Average training loss: 0.937
+Finetuned average test accuracy:  25.525
+---------Round 8---------
+Average test accuracy:  26.450
+Average training loss: 0.902
+Finetuned average test accuracy:  26.450
+---------Round 9---------
+Average test accuracy:  27.100
+Average training loss: 0.860
+Finetuned average test accuracy:  27.100
+---------Round 10---------
+Average test accuracy:  27.100
+Average training loss: 0.772
+Finetuned average test accuracy:  27.100
+---------Round 11---------
+Average test accuracy:  27.375
+Average training loss: 0.711
+Finetuned average test accuracy:  27.375
+---------Round 12---------
+Average test accuracy:  27.500
+Average training loss: 0.546
+Finetuned average test accuracy:  27.500
+---------Round 13---------
+Average test accuracy:  28.925
+Average training loss: 0.586
+Finetuned average test accuracy:  28.925
+---------Round 14---------
+Average test accuracy:  30.375
+Average training loss: 0.388
+Finetuned average test accuracy:  30.375
+---------Round 15---------
+Average test accuracy:  28.125
+Average training loss: 0.478
+Finetuned average test accuracy:  28.125
+---------Round 16---------
+Average test accuracy:  30.475
+Average training loss: 0.350
+Finetuned average test accuracy:  30.475
+---------Round 17---------
+Average test accuracy:  28.100
+Average training loss: 0.267
+Finetuned average test accuracy:  28.100
+---------Round 18---------
+Average test accuracy:  27.450
+Average training loss: 0.278
+Finetuned average test accuracy:  27.450
+---------Round 19---------
+Average test accuracy:  28.575
+Average training loss: 0.198
+Finetuned average test accuracy:  28.575
+---------Round 20---------
+Average test accuracy:  29.525
+Average training loss: 0.199
+Finetuned average test accuracy:  29.525
+---------Round 21---------
+Average test accuracy:  28.625
+Average training loss: 0.080
+Finetuned average test accuracy:  28.625
+---------Round 22---------
+Average test accuracy:  28.925
+Average training loss: 0.073
+Finetuned average test accuracy:  28.925
+---------Round 23---------
+Average test accuracy:  28.550
+Average training loss: 0.089
+Finetuned average test accuracy:  28.550
+---------Round 24---------
+Average test accuracy:  28.100
+Average training loss: 0.048
+Finetuned average test accuracy:  28.100
+---------Round 25---------
+Average test accuracy:  29.400
+Average training loss: 0.115
+Finetuned average test accuracy:  29.400
+---------Round 26---------
+Average test accuracy:  29.125
+Average training loss: 0.050
+Finetuned average test accuracy:  29.125
+---------Round 27---------
+Average test accuracy:  29.275
+Average training loss: 0.055
+Finetuned average test accuracy:  29.275
+---------Round 28---------
+Average test accuracy:  30.100
+Average training loss: 0.049
+Finetuned average test accuracy:  30.100
+---------Round 29---------
+Average test accuracy:  29.250
+Average training loss: 0.002
+Finetuned average test accuracy:  29.250
+---------Round 30---------
+Average test accuracy:  29.650
+Average training loss: 0.008
+Finetuned average test accuracy:  29.650
+---------Round 31---------
+Average test accuracy:  28.850
+Average training loss: 0.002
+Finetuned average test accuracy:  28.850
+---------Round 32---------
+Average test accuracy:  28.225
+Average training loss: 0.001
+Finetuned average test accuracy:  28.225
+---------Round 33---------
+Average test accuracy:  28.400
+Average training loss: 0.001
+Finetuned average test accuracy:  28.400
+---------Round 34---------
+Average test accuracy:  28.375
+Average training loss: 0.001
+Finetuned average test accuracy:  28.375
+---------Round 35---------
+Average test accuracy:  29.275
+Average training loss: 0.002
+Finetuned average test accuracy:  29.275
+---------Round 36---------
+Average test accuracy:  28.725
+Average training loss: 0.002
+Finetuned average test accuracy:  28.725
+---------Round 37---------
+Average test accuracy:  28.750
+Average training loss: 0.001
+Finetuned average test accuracy:  28.750
+---------Round 38---------
+Average test accuracy:  29.300
+Average training loss: 0.001
+Finetuned average test accuracy:  29.300
+---------Round 39---------
+Average test accuracy:  29.425
+Average training loss: 0.001
+Finetuned average test accuracy:  29.425
+---------Round 40---------
+Average test accuracy:  28.650
+Average training loss: 0.001
+Finetuned average test accuracy:  28.650
+---------Round 41---------
+Average test accuracy:  28.850
+Average training loss: 0.001
+Finetuned average test accuracy:  28.850
+---------Round 42---------
+Average test accuracy:  27.800
+Average training loss: 0.001
+Finetuned average test accuracy:  27.800
+---------Round 43---------
+Average test accuracy:  28.500
+Average training loss: 0.001
+Finetuned average test accuracy:  28.500
+---------Round 44---------
+Average test accuracy:  29.600
+Average training loss: 0.001
+Finetuned average test accuracy:  29.600
+---------Round 45---------
+Average test accuracy:  28.675
+Average training loss: 0.001
+Finetuned average test accuracy:  28.675
+---------Round 46---------
+Average test accuracy:  27.875
+Average training loss: 0.001
+Finetuned average test accuracy:  27.875
+---------Round 47---------
+Average test accuracy:  28.125
+Average training loss: 0.001
+Finetuned average test accuracy:  28.125
+---------Round 48---------
+Average test accuracy:  28.600
+Average training loss: 0.000
+Finetuned average test accuracy:  28.600
+---------Round 49---------
+Average test accuracy:  28.475
+Average training loss: 0.001
+Finetuned average test accuracy:  28.475
+---------Round 50---------
+Average test accuracy:  28.250
+Average training loss: 0.001
+Finetuned average test accuracy:  28.250
+---------Round 51---------
+Average test accuracy:  29.300
+Average training loss: 0.000
+Finetuned average test accuracy:  29.300
+---------Round 52---------
+Average test accuracy:  29.050
+Average training loss: 0.000
+Finetuned average test accuracy:  29.050
+---------Round 53---------
+Average test accuracy:  27.075
+Average training loss: 0.000
+Finetuned average test accuracy:  27.075
+---------Round 54---------
+Average test accuracy:  28.125
+Average training loss: 0.000
+Finetuned average test accuracy:  28.125
+---------Round 55---------
+Average test accuracy:  28.675
+Average training loss: 0.000
+Finetuned average test accuracy:  28.675
+---------Round 56---------
+Average test accuracy:  28.375
+Average training loss: 0.000
+Finetuned average test accuracy:  28.375
+---------Round 57---------
+Average test accuracy:  27.650
+Average training loss: 0.000
+Finetuned average test accuracy:  27.650
+---------Round 58---------
