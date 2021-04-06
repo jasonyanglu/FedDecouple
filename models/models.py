@@ -235,11 +235,12 @@ class ResNet(nn.Module):
         self.layer2 = self._make_layer(block, 128, num_blocks[1], stride=2)
         self.layer3 = self._make_layer(block, 256, num_blocks[2], stride=2)
         self.layer4 = self._make_layer(block, 512, num_blocks[3], stride=2)
-        self.linear = nn.Linear(512 * block.expansion, args.num_classes)
-        self.cb_block = block(self.in_planes, self.in_planes, stride=1)
-        self.rb_block = block(self.in_planes, self.in_planes, stride=1)
+        self.cb_linear = nn.Linear(512 * block.expansion, args.num_classes)
+        self.rb_linear = nn.Linear(512 * block.expansion, args.num_classes)
+        #self.cb_block = block(self.in_planes, self.in_planes, stride=1)
+        #self.rb_block = block(self.in_planes, self.in_planes, stride=1)
         
-        self.apply(_weights_init)
+        #self.apply(_weights_init)
 
     def _make_layer(self, block, planes, num_blocks, stride):
         strides = [stride] + [1] * (num_blocks - 1)
@@ -250,7 +251,7 @@ class ResNet(nn.Module):
 
         return nn.Sequential(*layers)
 
-    def forward(self, x, **kwargs):
+    def forward(self, x, feature_cb=False, feature_rb=False, classifier_cb=False, classifier_rb=False):
         out = F.relu(self.bn1(self.conv1(x)))
         out = self.layer1(out)
         out = self.layer2(out)
@@ -258,19 +259,18 @@ class ResNet(nn.Module):
         out = self.layer4(out)
         out = F.avg_pool2d(out, 4)
         out = out.view(out.size(0), -1)
-        out = self.linear(out)
-        if "feature_cb" in kwargs:
-            out = self.cb_block(out)
-            return out
-        elif "feature_rb" in kwargs:
-            out = self.rb_block(out)
+        
+        if feature_cb or feature_rb:
             return out
         
-        out1 = self.cb_block(out)
-        out2 = self.rb_block(out)
-        out = torch.cat((out1,out2),dim=1)
+        if classifier_cb:
+            out = self.cb_linear(out)
+            return out
+        
+        if classifier_rb:
+            out = self.rb_linear(out)
+            return out
 
-        return out
 
     def ResNet18(args):
         return ResNet(BasicBlock, [2, 2, 2, 2], args)
@@ -442,7 +442,7 @@ class NewNet(nn.Module):
         out = out.view(out.size(0), -1)
         out = self.linear(out)
         return out
-        return x
+        
 
 
 class customMobileNet150(nn.Module):

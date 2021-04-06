@@ -124,7 +124,7 @@ def finetune_client(args, dataset, model):
     
 
     # train and update
-    optimizer = torch.optim.SGD(model.parameters(), lr=args.lr)
+    optimizer = torch.optim.SGD(model.parameters(), lr=args.finetune_lr)
     
     epoch_loss = []
 

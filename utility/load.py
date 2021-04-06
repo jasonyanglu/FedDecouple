@@ -30,7 +30,8 @@ def load_dataset(args):
             [transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
         train_dataset = datasets.CIFAR10(args.path_cifar10, train=True, download=True, transform=trans_cifar)
         test_dataset = datasets.CIFAR10(args.path_cifar10, train=False, download=True, transform=trans_cifar)
-        if args.imbalance != 0:
+        if args.imbalance_factor != 0:
+            print(args.imbalance_factor)
             train_clients_idx, client_class_idx = cifar10_longtailed(args, train_dataset, args.imbalance_factor)
             test_clients_idx, _ = cifar10_longtailed(args, test_dataset, 1)
         else:

@@ -1,0 +1,69 @@
+Training
+---------Round 0---------
+Average train accuracy:  46.915
+Finetuned average test accuracy:  22.625
+---------Round 1---------
+Average train accuracy:  52.762
+Finetuned average test accuracy:  23.425
+---------Round 2---------
+Average train accuracy:  51.250
+Finetuned average test accuracy:  22.225
+---------Round 3---------
+Average train accuracy:  60.907
+Finetuned average test accuracy:  24.150
+---------Round 4---------
+Average train accuracy:  64.315
+Finetuned average test accuracy:  26.075
+---------Round 5---------
+Average train accuracy:  64.698
+Finetuned average test accuracy:  25.650
+---------Round 6---------
+Average train accuracy:  67.802
+Finetuned average test accuracy:  26.175
+---------Round 7---------
+Average train accuracy:  78.206
+Finetuned average test accuracy:  25.575
+---------Round 8---------
+Average train accuracy:  81.815
+Finetuned average test accuracy:  25.700
+---------Round 9---------
+Average train accuracy:  77.016
+Finetuned average test accuracy:  26.075
+---------Round 10---------
+Average train accuracy:  91.008
+Finetuned average test accuracy:  26.975
+---------Round 11---------
+Average train accuracy:  83.911
+Finetuned average test accuracy:  27.025
+---------Round 12---------
+Average train accuracy:  97.681
+Finetuned average test accuracy:  26.550
+---------Round 13---------
+Average train accuracy:  90.504
+Finetuned average test accuracy:  27.225
+---------Round 14---------
+Average train accuracy:  90.242
+Finetuned average test accuracy:  26.900
+---------Round 15---------
+Average train accuracy:  93.810
+Finetuned average test accuracy:  27.075
+---------Round 16---------
+Average train accuracy:  94.254
+Finetuned average test accuracy:  25.650
+---------Round 17---------
+Average train accuracy:  96.411
+Finetuned average test accuracy:  26.475
+---------Round 18---------
+Average train accuracy:  98.548
+Finetuned average test accuracy:  26.425
+---------Round 19---------
+Average train accuracy:  98.347
+Finetuned average test accuracy:  26.250
+---------Round 20---------
+Average train accuracy:  98.246
+Finetuned average test accuracy:  25.650
+---------Round 21---------
+Average train accuracy:  98.548
+Finetuned average test accuracy:  25.475
+---------Round 22---------
+Average train accuracy:  99.577
