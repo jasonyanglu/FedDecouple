@@ -135,18 +135,22 @@ def finetune_client(args, dataset, model):
             images1, labels1 = images_labels[0][0].to(args.device), images_labels[0][1].to(args.device)
             images2, labels2 = images_labels[1][0].to(args.device), images_labels[1][1].to(args.device)
             
+            optimizer.zero_grad() 
+            log_probs1 = model(images1,classifier_cb=True)            
+            loss1 = loss_func(log_probs1, labels1)   
+            loss_cb = 0.5 * loss1
+            loss_cb.backward()
+            optimizer.step()
+
             optimizer.zero_grad()
-            
-            log_probs1 = model(images1,classifier_cb=True)
             log_probs2 = model(images2,classifier_rb=True)
-            loss1 = loss_func(log_probs1, labels1)
             loss2 = loss_func(log_probs2, labels2)
-            loss = 0.5 * loss1 + 0.5 * loss2
-            loss.backward()
+            loss_rb = 0.5 * loss2
+            loss_rb.backward()
             optimizer.step()
             
 
-            batch_loss.append(loss.item())
+            batch_loss.append(loss_cb.item() + loss_rb.item())
         epoch_loss.append(sum(batch_loss) / len(batch_loss))
 
     return model.state_dict(), sum(epoch_loss) / len(epoch_loss)

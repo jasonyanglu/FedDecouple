@@ -31,7 +31,7 @@ def args_parser():
     # fl
     parser.add_argument('--num_clients', type=int, default=20)
     parser.add_argument('--C', type=float, default=0.4)
-    parser.add_argument('--num_rounds', type=int, default=50)
+    parser.add_argument('--num_rounds', type=int, default=60)
     parser.add_argument('--num_local_epochs', type=int, default=5)
     parser.add_argument('--num_local_finetune_epochs', type=int, default=5)
     parser.add_argument('--finetune', type=bool, default=True)
@@ -41,8 +41,8 @@ def args_parser():
     parser.add_argument('--model', type=str, default='resnet')
     parser.add_argument('--train_batch_size', type=int, default=64)
     parser.add_argument('--test_batch_size', type=int, default=500)
-    parser.add_argument('--lr', type=float, default=0.1)
-    parser.add_argument('--finetune_lr', type=float, default=0.08)
+    parser.add_argument('--lr', type=float, default=0.01)
+    parser.add_argument('--finetune_lr', type=float, default=0.005)
     parser.add_argument('--momentum', type=float, default=0.9)
 
     # environment
@@ -194,7 +194,7 @@ def main():
         # Updating base layers of the clients and keeping the personalized layers same
         for client_i in range(len(selected_clients)):
             
-            for param_name in list(global_params.keys())[0:15]:
+            for param_name in list(global_params.keys())[0:216]:
                 local_params[client_i][param_name] = copy.deepcopy(global_params[param_name])
             local_model[selected_clients[client_i]].load_state_dict(local_params[client_i])
 
@@ -202,7 +202,7 @@ def main():
         if args.finetune:
             #print("FineTuning")
             
-            personal_params = list(global_params.keys())[15:]
+            personal_params = list(global_params.keys())[216:]
             #personal_params= np.append(personal_params, list(global_params.keys())[10:])
             
             for client_i in selected_clients:
