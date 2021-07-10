@@ -115,6 +115,7 @@ def cifar10_noniid_imbalance(args, dataset, client_class_idx=None):
     if client_class_idx is None:
         client_class_idx = choose_two_digit_imbalance(10, k)
 
+
     for i in range(args.num_clients):
 
         min_class = idx_list[client_class_idx[i][0]]
@@ -128,6 +129,64 @@ def cifar10_noniid_imbalance(args, dataset, client_class_idx=None):
         dict_clients[i] = np.append(dict_clients[i], list(maj_class_idx))
 
     return dict_clients, client_class_idx
+
+def cifar10_longtailed_modified(args, dataset, client_class_idx=None):
+    num_class = 10
+    num_items = len(dataset)
+    dict_clients = {}
+    labels = np.arange(10)
+    idx_list = [[] for _ in range(10)]
+
+    for idx, i in enumerate(dataset):
+        idx_list[i[1]].append(idx)
+
+    # global long-tail
+    img_max = int(np.ceil(num_items /(num_class)))
+    img_num_per_class = []
+    num_total = 0
+    for cls_idx in range(num_class):
+        num = img_max * (args.imbalance_factor**(cls_idx / (num_class - 1.0)))
+        num_total += np.floor(num)
+        img_num_per_class.append(int(num))
+    
+
+    # if k = 4, a particular client can have samples only from at max 4 classes
+    # k = args.overlapping_classes
+    
+    k = 2
+    
+    if client_class_idx is None:
+        client_class_idx = choose_two_digit_imbalance(10, k)
+        print(client_class_idx)
+
+    frequency = []
+    for i in range(10):
+        a = np.random.dirichlet(np.ones(4),size=1)
+        frequency.append( a.tolist()[0])
+
+
+    for i in range(args.num_clients):
+
+        min_idx = client_class_idx[i][0]
+        min_class = idx_list[min_idx]
+        count = frequency[min_idx][0]*img_num_per_class[min_idx]
+        print(str(i) + "min: " + str(count))
+        min_class_idx = set(np.random.choice(min_class, int(np.floor(count)), replace=False))
+        frequency[min_idx].pop(0)
+        idx_list[min_idx] = list(set(min_class) - min_class_idx)
+        dict_clients[i] = list(min_class_idx)
+
+        maj_idx = client_class_idx[i][1]
+        maj_class = idx_list[maj_idx]
+        count = img_num_per_class[maj_idx]*frequency[maj_idx][0]
+        print(str(i) + "maj: " + str(count))
+        maj_class_idx = set(np.random.choice(maj_class, int(np.floor(count)) , replace=False))
+        frequency[maj_idx].pop(0)
+        idx_list[maj_idx] = list(set(maj_class) - maj_class_idx)
+        dict_clients[i] = np.append(dict_clients[i], list(maj_class_idx))
+
+    return dict_clients, client_class_idx
+
 
 def cifar10_longtailed(args, dataset, imb_factor):
     num_class = 10
