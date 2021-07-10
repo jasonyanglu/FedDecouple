@@ -45,11 +45,55 @@ class CNNMnist(nn.Module):
         x = self.fc2(x)
         return F.log_softmax(x, dim=1)
 
+class CNNBlock(nn.Module):
+
+    def __init__(self,args):
+        super(CNNBlock, self).__init__()
+        self.fc1 = nn.Linear(16*2*2, 120)
+        self.fc2 = nn.Linear(120, 84)
+        self.fc3 = nn.Linear(84, args.num_classes)
+    
+    def forward(self, x):
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        x = self.fc3(x)
+        
+        return x
 
 # a small cnn model for cifar10 dataset
 class CNNCifar(nn.Module):
-    def __init__(self, args):
+    def __init__(self, args,**kwargs):
         super(CNNCifar, self).__init__()
+        self.conv1 = nn.Conv2d(3, 6, 5)
+        self.pool = nn.MaxPool2d(2, 2)
+        self.conv2 = nn.Conv2d(6, 16, 5)
+        self.avgpool = nn.AdaptiveAvgPool2d((2,2))
+        # self.fc1 = nn.Linear(16 * 5 * 5, 120)
+        # self.fc2 = nn.Linear(120, 84)
+        # self.fc3 = nn.Linear(84, args.num_classes)
+        self.cb_block = CNNBlock(args=args)
+        self.rb_block = CNNBlock(args=args)
+
+    def forward(self, x, feature_cb=False, feature_rb=False, classifier_cb=False, classifier_rb=False):
+        x = self.pool(F.relu(self.conv1(x)))
+        x = self.avgpool(F.relu(self.conv2(x)))
+        x = x.view(-1, 16*2*2)
+
+        if feature_cb or feature_rb:
+            return x
+        
+        if classifier_cb:
+            x = self.cb_block(x)
+            return x
+        
+        if classifier_rb:
+            x = self.rb_block(x)
+            return x
+        
+# a small cnn model for cifar10 dataset
+class CNNPer(nn.Module):
+    def __init__(self, args):
+        super(CNNPer, self).__init__()
         self.conv1 = nn.Conv2d(3, 6, 5)
         self.pool = nn.MaxPool2d(2, 2)
         self.conv2 = nn.Conv2d(6, 16, 5)
@@ -169,9 +213,7 @@ class Bottleneck(nn.Module):
         out = F.relu(out)
         return out
 
-
-# architecture for resnet  
-
+# resnet
 class ResNet(nn.Module):
     """
     Class for ResNet architecture - Standard Architecture
@@ -191,7 +233,10 @@ class ResNet(nn.Module):
         self.layer2 = self._make_layer(block, 128, num_blocks[1], stride=2)
         self.layer3 = self._make_layer(block, 256, num_blocks[2], stride=2)
         self.layer4 = self._make_layer(block, 512, num_blocks[3], stride=2)
-        self.linear = nn.Linear(512 * block.expansion, args.num_classes)
+        self.cb_linear = nn.Linear(512 * block.expansion, args.num_classes)
+        
+        
+        #self.apply(_weights_init)
 
     def _make_layer(self, block, planes, num_blocks, stride):
         strides = [stride] + [1] * (num_blocks - 1)
@@ -202,7 +247,7 @@ class ResNet(nn.Module):
 
         return nn.Sequential(*layers)
 
-    def forward(self, x):
+    def forward(self, x, feature_cb=False, feature_rb=False, classifier_cb=False, classifier_rb=False):
         out = F.relu(self.bn1(self.conv1(x)))
         out = self.layer1(out)
         out = self.layer2(out)
@@ -210,8 +255,9 @@ class ResNet(nn.Module):
         out = self.layer4(out)
         out = F.avg_pool2d(out, 4)
         out = out.view(out.size(0), -1)
-        out = self.linear(out)
+        out = self.cb_linear(out)
         return out
+        
 
     def ResNet18(args):
         return ResNet(BasicBlock, [2, 2, 2, 2], args)
@@ -228,6 +274,163 @@ class ResNet(nn.Module):
     def ResNet152(args):
         return ResNet(Bottleneck, [3, 8, 36, 3], args)
 
+# architecture for resnet  
+
+class Decouple_ResNet(nn.Module):
+    """
+    Class for ResNet architecture - Standard Architecture
+
+    Resnet with 18, 34, 50, 101 and 152 layers can be declared. 
+
+    We used ResNet 34 for our experiments. 
+
+    """
+
+    def __init__(self, block, num_blocks, args):
+        super(Decouple_ResNet, self).__init__()
+        self.in_planes = 64
+        self.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False)
+        self.bn1 = nn.BatchNorm2d(64)
+        self.layer1 = self._make_layer(block, 64, num_blocks[0], stride=1)
+        self.layer2 = self._make_layer(block, 128, num_blocks[1], stride=2)
+        self.layer3 = self._make_layer(block, 256, num_blocks[2], stride=2)
+        self.layer4 = self._make_layer(block, 512, num_blocks[3], stride=2)
+        self.cb_linear = nn.Linear(512 * block.expansion, args.num_classes)
+        self.rb_linear = nn.Linear(512 * block.expansion, args.num_classes)
+        # self.sb1_linear = nn.Linear(512 * block.expansion, args.num_classes)
+        # self.sb2_linear = nn.Linear(512 * block.expansion, args.num_classes)
+        #self.cb_block = block(self.in_planes, self.in_planes, stride=1)
+        #self.rb_block = block(self.in_planes, self.in_planes, stride=1)
+        
+        #self.apply(_weights_init)
+
+    def _make_layer(self, block, planes, num_blocks, stride):
+        strides = [stride] + [1] * (num_blocks - 1)
+        layers = []
+        for stride in strides:
+            layers.append(block(self.in_planes, planes, stride))
+            self.in_planes = planes * block.expansion
+
+        return nn.Sequential(*layers)
+
+    def forward(self, x, feature_cb=False, feature_rb=False, classifier_cb=False, classifier_rb=False, classifier_sb1=False, classifier_sb2=False):
+        out = F.relu(self.bn1(self.conv1(x)))
+        out = self.layer1(out)
+        out = self.layer2(out)
+        out = self.layer3(out)
+        out = self.layer4(out)
+        out = F.avg_pool2d(out, 4)
+        out = out.view(out.size(0), -1)
+        
+        if feature_cb or feature_rb:
+            return out
+        
+        if classifier_cb:
+            out = self.cb_linear(out)
+            return out
+        
+        if classifier_rb:
+            out = self.rb_linear(out)
+            return out
+        '''
+        if classifier_sb1:
+            out = self.sb1_linear(out)
+            return out
+        
+        if classifier_sb2:
+            out = self.sb2_linear(out)
+            return out
+        '''
+
+
+    def ResNet18(args):
+        return Decouple_ResNet(BasicBlock, [2, 2, 2, 2], args)
+
+    def ResNet34(args):
+        return Decouple_ResNet(BasicBlock, [3, 4, 6, 3], args)
+
+    def ResNet50(args):
+        return Decouple_ResNet(Bottleneck, [3, 4, 6, 3], args)
+
+    def ResNet101(args):
+        return Decouple_ResNet(Bottleneck, [3, 4, 23, 3], args)
+
+    def ResNet152(args):
+        return Decouple_ResNet(Bottleneck, [3, 8, 36, 3], args)
+
+class BBN_ResNet_Cifar(nn.Module):
+    def __init__(self, block, num_blocks):
+        super(BBN_ResNet_Cifar, self).__init__()
+        self.in_planes = 16
+
+        self.conv1 = nn.Conv2d(3, 16, kernel_size=3, stride=1, padding=1, bias=False)
+        self.bn1 = nn.BatchNorm2d(16)
+        self.layer1 = self._make_layer(block, 16, num_blocks[0], stride=1)
+        self.layer2 = self._make_layer(block, 32, num_blocks[1], stride=2)
+        self.layer3 = self._make_layer(block, 64, num_blocks[2] - 1, stride=2)
+        self.cb_block = block(self.in_planes, self.in_planes, stride=1)
+        self.rb_block = block(self.in_planes, self.in_planes, stride=1)
+
+        self.apply(_weights_init)
+
+    def load_model(self, pretrain):
+        print("Loading Backbone pretrain model from {}......".format(pretrain))
+        model_dict = self.state_dict()
+        pretrain_dict = torch.load(pretrain)["state_dict"]
+        from collections import OrderedDict
+
+        new_dict = OrderedDict()
+
+        for k, v in pretrain_dict.items():
+            if k.startswith("module"):
+                k = k[7:]
+            if "fc" not in k and "classifier" not in k:
+                k = k.replace("backbone.", "")
+                new_dict[k] = v
+
+        model_dict.update(new_dict)
+        self.load_state_dict(model_dict)
+        print("Backbone model has been loaded......")
+
+    def _make_layer(self, block, planes, num_blocks, stride, add_flag=True):
+        strides = [stride] + [1] * (num_blocks - 1)
+        layers = []
+        for stride in strides:
+            layers.append(block(self.in_planes, planes, stride))
+            self.in_planes = planes * block.expansion
+
+        return nn.Sequential(*layers)
+
+    def forward(self, x, **kwargs):
+        out = F.relu(self.bn1(self.conv1(x)))
+        out = self.layer1(out)
+        out = self.layer2(out)
+        out = self.layer3(out)
+        if "feature_cb" in kwargs:
+            out = self.cb_block(out)
+            return out
+        elif "feature_rb" in kwargs:
+            out = self.rb_block(out)
+            return out
+
+        out1 = self.cb_block(out)
+        out2 = self.rb_block(out)
+        out = torch.cat((out1, out2), dim=1)
+
+        return out
+
+def bbn_res32_cifar(
+    cfg,
+    pretrain=True,
+    pretrained_model="/data/Data/pretrain_models/resnet50-19c8e357.pth",
+    last_layer_stride=2,
+):
+    resnet = BBN_ResNet_Cifar(BasicBlock, [5, 5, 5])
+    if pretrain and pretrained_model != "":
+        resnet.load_model(pretrain=pretrained_model)
+    else:
+        print("Choose to train from scratch")
+    return resnet
 
 # a different way of implementing mobilenet architecture 
 
@@ -310,7 +513,7 @@ class NewNet(nn.Module):
         out = out.view(out.size(0), -1)
         out = self.linear(out)
         return out
-        return x
+        
 
 
 class customMobileNet150(nn.Module):

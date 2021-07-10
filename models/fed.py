@@ -4,7 +4,7 @@ from torch import nn
 
 
 # since the number of samples in all the users is same, simple averaging works
-def FedAvg(w):
+def FedAvg(w, num_sample_clients, selected_clients):
     '''
 
     Function to average the updated weights of client models to update the global model (when the number of samples is same for each client)
@@ -18,12 +18,15 @@ def FedAvg(w):
         w_avg (state_dict) : The updated state_dict for global model
 
     '''
-
+    total = 0
+    for i in selected_clients:
+        total += num_sample_clients[i]
+    
     w_avg = copy.deepcopy(w[0])
     for k in w_avg.keys():
         for i in range(1, len(w)):
-            w_avg[k] += w[i][k]
-        w_avg[k] = torch.div(w_avg[k], len(w))
+            w_avg[k] += torch.mul(w[i][k], num_sample_clients[i])
+        w_avg[k] = torch.div(w_avg[k], total)
     return w_avg
 
 

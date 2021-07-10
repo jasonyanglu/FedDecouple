@@ -1,0 +1,6 @@
+Training
+---------Round 0---------
+Average train accuracy:  39.536
+Finetuned average test accuracy:  9.750
+---------Round 1---------
+Average train accuracy:  41.411

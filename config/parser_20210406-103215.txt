@@ -1,0 +1,19 @@
+{
+    "dataset": "cifar10",
+    "path_cifar10": "../data/cifar10/",
+    "path_cifar100": "../data/cifar100/",
+    "imbalance": 10,
+    "num_clients": 20,
+    "C": 0.4,
+    "num_rounds": 50,
+    "num_local_epochs": 20,
+    "num_local_finetune_epochs": 5,
+    "finetune": true,
+    "base_layers": 4,
+    "model": "cnn",
+    "train_batch_size": 64,
+    "test_batch_size": 500,
+    "lr": 0.1,
+    "momentum": 0.9,
+    "gpu": 0
+}

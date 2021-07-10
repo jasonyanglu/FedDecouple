@@ -1,8 +1,8 @@
 from torchvision import datasets, transforms
 import torch
 from models.models import MLP, CNNMnist, CNNCifar, ResNet, MobileNet, Net, NewNet, customResNet, customMobileNet162, \
-    customMobileNet138, customMobileNet150
-from utility.sampling import mnist_iid, mnist_noniid, cifar_iid, cifar10_noniid, cifar100_noniid, cifar10_noniid_imbalance
+    customMobileNet138, customMobileNet150, CNNPer, Decouple_ResNet
+from utility.sampling import mnist_iid, mnist_noniid, cifar_iid, cifar10_noniid, cifar100_noniid, cifar10_noniid_imbalance, cifar10_longtailed, cifar10_longtailed_modified
 
 
 # function to load predefined datasets; can make custom dataloader here as well
@@ -30,8 +30,10 @@ def load_dataset(args):
             [transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
         train_dataset = datasets.CIFAR10(args.path_cifar10, train=True, download=True, transform=trans_cifar)
         test_dataset = datasets.CIFAR10(args.path_cifar10, train=False, download=True, transform=trans_cifar)
-        if args.imbalance != 0:
-            train_clients_idx, client_class_idx = cifar10_noniid_imbalance(args, train_dataset)
+        if args.imbalance_factor != 0:
+            # train_clients_idx, client_class_idx = cifar10_longtailed(args, train_dataset, args.imbalance_factor)
+            # test_clients_idx, _ = cifar10_longtailed(args, test_dataset, 1)
+            train_clients_idx, client_class_idx = cifar10_longtailed_modified(args, train_dataset)
             test_clients_idx, _ = cifar10_noniid(args, test_dataset, client_class_idx)
         else:
             clients_idx = cifar10_noniid(args, train_dataset, args.num_clients)
@@ -61,10 +63,14 @@ def load_model(args):
 
     '''
 
-    if args.model == 'cnn' and args.dataset == 'cifar':
+    if args.model == 'cnn' and args.dataset == 'cifar10':
         model = CNNCifar(args=args).to(args.device)
+    elif args.model == 'fedper':
+        model = CNNPer(args=args).to(args.device)
     elif args.model == 'cnn' and args.dataset == 'mnist':
         model = CNNMnist(args=args).to(args.device)
+    elif args.model == 'decouple':
+        model = Decouple_ResNet.ResNet34(args=args).to(args.device)
     elif args.model == 'mlp':
         len_in = 1
         for x in img_size:
